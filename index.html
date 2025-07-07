@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <title>Exploração 3D - Sol</title>
+  <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
   <style>
     body {
       margin: 0;
@@ -44,35 +45,52 @@
       border-radius: 5px;
       cursor: pointer;
     }
-    #voiceToggleButton {
+    #voiceToggleButton, #arButton {
       position: absolute;
       bottom: 20px;
-      right: 20px;
-      background: #FFA726;
-      color: white;
-      border: none;
       padding: 10px 15px;
       border-radius: 5px;
       font-size: 16px;
       z-index: 10;
       cursor: pointer;
+      border: none;
+      color: white;
+    }
+    #voiceToggleButton {
+      right: 20px;
+      background: #FFA726;
+    }
+    #arButton {
+      left: 20px;
+      background: #00BCD4;
+    }
+    model-viewer {
+      width: 0;
+      height: 0;
+      visibility: hidden;
     }
   </style>
 </head>
 <body>
 
-  <!-- Botão AR -->
-  <a href="intent://arvr.google.com/scene-viewer/1.0?file=https://seusite.com/modelo4.glb&mode=ar_preferred#Intent;scheme=https;package=com.google.ar.core;action=android.intent.action.VIEW;S.browser_fallback_url=https://seusite.com/fallback.html;end;"
-     style="position: absolute; bottom: 20px; left: 20px; background: #e91e63; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-family: sans-serif; z-index: 15;">
-    📱 Ver em AR
-  </a>
+<!-- model-viewer oculto para AR -->
+<model-viewer id="arViewer"
+  src="https://jp548.github.io/galeria3D/sol.glb"
+  ar
+  ar-modes="scene-viewer quick-look webxr"
+  camera-controls
+  style="width: 0; height: 0; visibility: hidden;"
+  alt="Modelo 3D do Sol">
+</model-viewer>
 
+<!-- Botões -->
 <div id="infoBox">Diga: "mostrar sol" ou clique no modelo</div>
 <div id="tooltip">
   <div id="tooltip-text"></div>
   <button onclick="fecharTooltip()">Fechar</button>
 </div>
 <button id="voiceToggleButton">🔊 Ler em voz alta: Ativo</button>
+<button id="arButton" onclick="abrirAR()">📱 Ver em AR</button>
 
 <!-- Three.js e loaders -->
 <script src="https://cdn.jsdelivr.net/npm/three@0.140.0/build/three.min.js"></script>
@@ -123,14 +141,11 @@ const descricaoSol = "O Sol é a estrela no centro do nosso sistema solar. Ele f
 
 function destacarParte(clientX = 0, clientY = 0) {
   if (!modelo) return;
-
-  // Remover destaque anterior
   if (meshDestacado && meshDestacado.material?.emissive) {
     meshDestacado.material.emissive.set(0x000000);
     meshDestacado = null;
   }
 
-  // Procurar a parte "Sun"
   modelo.traverse(obj => {
     if (obj.isMesh && obj.name === nomeMesh) {
       meshDestacado = obj;
@@ -169,7 +184,6 @@ const dracoLoader = new THREE.DRACOLoader();
 dracoLoader.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.140.0/examples/js/libs/draco/');
 loader.setDRACOLoader(dracoLoader);
 
-// Altere o caminho se estiver hospedado externamente
 loader.load('modelo5.glb', (gltf) => {
   modelo = gltf.scene;
   modelo.scale.set(1.2, 1.2, 1.2);
@@ -233,6 +247,16 @@ window.addEventListener('resize', () => {
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
+
+// Abrir AR
+function abrirAR() {
+  const arViewer = document.getElementById('arViewer');
+  if (arViewer.activateAR) {
+    arViewer.activateAR();
+  } else {
+    arViewer.click(); // força o AR nos browsers que suportam
+  }
+}
 </script>
 </body>
 </html>
