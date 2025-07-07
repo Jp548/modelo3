@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Exploração 3D - Sol</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      height: 100vh;
+      background: linear-gradient(135deg, #cf091a, #d21976);
+    }
+    #infoBox {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: white;
+      color: black;
+      padding: 10px;
+      border-radius: 10px;
+      font-family: sans-serif;
+      z-index: 10;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    #tooltip {
+      position: absolute;
+      background: white;
+      color: black;
+      padding: 10px;
+      border-radius: 8px;
+      font-size: 14px;
+      max-width: 250px;
+      pointer-events: auto;
+      display: none;
+      z-index: 20;
+      box-shadow: 0 0 10px rgba(0,0,0,0.2);
+    }
+    #tooltip button {
+      margin-top: 10px;
+      background: #ff5555;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    #voiceToggleButton {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      background: #FFA726;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 5px;
+      font-size: 16px;
+      z-index: 10;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Botão AR -->
+  <a href="intent://arvr.google.com/scene-viewer/1.0?file=https://seusite.com/modelo4.glb&mode=ar_preferred#Intent;scheme=https;package=com.google.ar.core;action=android.intent.action.VIEW;S.browser_fallback_url=https://seusite.com/fallback.html;end;"
+     style="position: absolute; bottom: 20px; left: 20px; background: #e91e63; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-family: sans-serif; z-index: 15;">
+    📱 Ver em AR
+  </a>
+
+<div id="infoBox">Diga: "mostrar sol" ou clique no modelo</div>
+<div id="tooltip">
+  <div id="tooltip-text"></div>
+  <button onclick="fecharTooltip()">Fechar</button>
+</div>
+<button id="voiceToggleButton">🔊 Ler em voz alta: Ativo</button>
+
+<!-- Three.js e loaders -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.140.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.140.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.140.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.140.0/examples/js/loaders/DRACOLoader.js"></script>
+
+<script>
+let narracaoAtiva = true;
+const voiceToggleButton = document.getElementById("voiceToggleButton");
+function atualizarTextoBotaoVoz() {
+  voiceToggleButton.textContent = narracaoAtiva ? "🔊 Ler em voz alta: Ativo" : "🔇 Ler em voz alta: Desativado";
+}
+voiceToggleButton.onclick = () => {
+  narracaoAtiva = !narracaoAtiva;
+  atualizarTextoBotaoVoz();
+};
+atualizarTextoBotaoVoz();
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+camera.position.set(0, 1.5, 3);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setClearColor(0x000000, 0);
+document.body.appendChild(renderer.domElement);
+
+const controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+
+scene.add(new THREE.HemisphereLight(0xffffff, 0x444444));
+
+let modelo;
+let meshDestacado = null;
+const clock = new THREE.Clock();
+
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+const infoBox = document.getElementById("infoBox");
+const tooltip = document.getElementById("tooltip");
+const tooltipText = document.getElementById("tooltip-text");
+
+// Dados do Sol
+const nomeMesh = "Sun";
+const nomeAmigavel = "Sol";
+const descricaoSol = "O Sol é a estrela no centro do nosso sistema solar. Ele fornece luz e calor essenciais para a vida na Terra.";
+
+function destacarParte(clientX = 0, clientY = 0) {
+  if (!modelo) return;
+
+  // Remover destaque anterior
+  if (meshDestacado && meshDestacado.material?.emissive) {
+    meshDestacado.material.emissive.set(0x000000);
+    meshDestacado = null;
+  }
+
+  // Procurar a parte "Sun"
+  modelo.traverse(obj => {
+    if (obj.isMesh && obj.name === nomeMesh) {
+      meshDestacado = obj;
+    }
+  });
+
+  if (meshDestacado) {
+    infoBox.textContent = `Mostrando: ${nomeAmigavel}`;
+    tooltipText.textContent = descricaoSol;
+    tooltip.style.left = (clientX + 15) + "px";
+    tooltip.style.top = (clientY + 15) + "px";
+    tooltip.style.display = "block";
+    speak(`Mostrando ${nomeAmigavel}. ${descricaoSol}`);
+  } else {
+    infoBox.textContent = "Parte não encontrada";
+    tooltip.style.display = "none";
+    speak("Parte não encontrada");
+  }
+}
+
+function fecharTooltip() {
+  tooltip.style.display = "none";
+}
+
+function speak(texto) {
+  if (!narracaoAtiva) return;
+  speechSynthesis.cancel();
+  const fala = new SpeechSynthesisUtterance(texto);
+  fala.lang = 'pt-BR';
+  speechSynthesis.speak(fala);
+}
+
+// Carregar modelo GLB
+const loader = new THREE.GLTFLoader();
+const dracoLoader = new THREE.DRACOLoader();
+dracoLoader.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.140.0/examples/js/libs/draco/');
+loader.setDRACOLoader(dracoLoader);
+
+// Altere o caminho se estiver hospedado externamente
+loader.load('modelo5.glb', (gltf) => {
+  modelo = gltf.scene;
+  modelo.scale.set(1.2, 1.2, 1.2);
+  scene.add(modelo);
+}, undefined, error => {
+  console.error('Erro ao carregar o modelo:', error);
+});
+
+function animate() {
+  requestAnimationFrame(animate);
+  controls.update();
+
+  if (meshDestacado && meshDestacado.material?.emissive) {
+    const elapsed = clock.getElapsedTime();
+    const intensity = (Math.sin(elapsed * 4) + 1) / 2;
+    meshDestacado.material.emissive.setRGB(intensity, intensity * 0.5, 0);
+  }
+
+  renderer.render(scene, camera);
+}
+animate();
+
+// Comando por voz: "mostrar sol"
+if ('webkitSpeechRecognition' in window) {
+  const recognition = new webkitSpeechRecognition();
+  recognition.lang = 'pt-BR';
+  recognition.continuous = true;
+  recognition.interimResults = false;
+  recognition.start();
+
+  recognition.onresult = (event) => {
+    const comando = event.results[event.results.length - 1][0].transcript.trim().toLowerCase();
+    infoBox.textContent = "Você disse: " + comando;
+    if (comando.includes("sol")) {
+      destacarParte(window.innerWidth / 2, window.innerHeight / 2);
+    }
+  };
+} else {
+  infoBox.textContent = "Reconhecimento de voz não suportado";
+}
+
+// Clique/touch
+function detectarCliqueOuToque(event) {
+  if (!modelo) return;
+  const clientX = event.touches ? event.touches[0].clientX : event.clientX;
+  const clientY = event.touches ? event.touches[0].clientY : event.clientY;
+
+  mouse.x = (clientX / window.innerWidth) * 2 - 1;
+  mouse.y = - (clientY / window.innerHeight) * 2 + 1;
+
+  raycaster.setFromCamera(mouse, camera);
+  const intersects = raycaster.intersectObjects(modelo.children, true);
+  if (intersects.length > 0) {
+    destacarParte(clientX, clientY);
+  }
+}
+window.addEventListener('click', detectarCliqueOuToque);
+window.addEventListener('touchstart', detectarCliqueOuToque, { passive: true });
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+</script>
+</body>
+</html>
