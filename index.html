@@ -81,9 +81,11 @@
   ar
   ar-modes="scene-viewer quick-look webxr"
   camera-controls
-  style="width: 0; height: 0; visibility: hidden;"
+  auto-rotate
+  style="display: none;" <!-- começa invisível -->
   alt="Modelo 3D do Sol">
 </model-viewer>
+
 
 <!-- Botões -->
 <div id="infoBox">Diga: "mostrar sol" ou clique no modelo</div>
@@ -253,12 +255,12 @@ window.addEventListener('resize', () => {
 // Abrir AR
 function abrirAR() {
   const arViewer = document.getElementById('arViewer');
-  if (arViewer.activateAR) {
-    arViewer.activateAR();
-  } else {
-    arViewer.click(); // força o AR nos browsers que suportam
-  }
+  arViewer.style.display = 'block';
+  arViewer.style.width = '100vw';
+  arViewer.style.height = '100vh';
+  arViewer.style.visibility = 'visible';
 }
+
 </script>
 </body>
 </html>
